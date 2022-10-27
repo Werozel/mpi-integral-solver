@@ -55,7 +55,7 @@ void master_routine() {
 
     double result = area * sum / NUMBER_OF_POINTS;
     std::cout << result << std::endl;
-    std::cout << abs(result - precise_res) << std::endl;
+    std::cout << std::abs(result - precise_res) << std::endl;
 }
 
 void worker_routine() {
