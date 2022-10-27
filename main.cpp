@@ -5,10 +5,10 @@
 double a1 = -1, a2 = -1, a3 = 0, b1 = 1, b2 = 1, b3 = 1;
 double area = (b1 - a1) * (b2 - a2) * (b3 - a3);
 
-const long NUMBER_OF_POINTS = 10000000;
+const long NUMBER_OF_POINTS = 1000;
 const long arr_size = NUMBER_OF_POINTS * 3;
 int n_proc, rank;
-int eps;
+double eps;
 const double precise_res = M_PI / 6.0;
 
 bool is_point_in_area(double x, double y, double z) {
@@ -32,15 +32,17 @@ double get_rand(double min, double max)
 void master_routine() {
     srand(time(nullptr));
 
-    std::cout << "Precise result: " << precise_res << std::endl;
+    std::cout << "Precise result: " << precise_res << std::endl << std::endl;
 
     int exiting = 0;
     double result = 0;
     double total_sum = 0;
     double total_points_c = 0;
     double iteration = 0;
+    double err;
 
     while (!exiting) {
+        iteration++;
         double *points = (double *) malloc(arr_size * sizeof(double) + MPI_BSEND_OVERHEAD + 7);
         for (long i = 0; i < arr_size; i += 3) {
             double x = get_rand(a1, b1);
@@ -66,17 +68,16 @@ void master_routine() {
         free(points);
 
         result = area * total_sum / total_points_c;
-
-        std::cout << "Iteration: " << iteration++ << std::endl;
-        std::cout << "Result: " << result << std::endl;
-        double err = std::abs(result - precise_res);
-        std::cout << "Error: " << err << std::endl << std::endl;
+        err = std::abs(result - precise_res);
 
         if (err <= eps) {
             exiting = 1;
         }
         MPI_Bcast(&exiting, 1, MPI_INT, 0, MPI_COMM_WORLD);
     }
+    std::cout << "Iterations: " << iteration << std::endl;
+    std::cout << "Result: " << result << std::endl;
+    std::cout << "Error: " << err << std::endl;
 }
 
 void worker_routine() {
@@ -105,7 +106,7 @@ int main(int argc, char *argv[]) {
         exit(1);
     }
 
-    eps = atof(argv[1]);
+    eps = strtod(argv[1], nullptr);
 
     int err = MPI_Init(&argc, &argv);
 
