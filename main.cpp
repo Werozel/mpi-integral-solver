@@ -32,44 +32,71 @@ double get_rand(double min, double max)
 void master_routine() {
     srand(time(nullptr));
 
-    double *points = (double *) malloc(arr_size * sizeof(double) + MPI_BSEND_OVERHEAD + 7);
-    for (long i = 0; i < arr_size; i += 3) {
-        double x = get_rand(a1, b1);
-        double y = get_rand(a2, b2);
-        double z = get_rand(a3, b3);
+    std::cout << "Precise result: " << precise_res << std::endl;
 
-        points[i] = x;
-        points[i + 1] = y;
-        points[i + 2] = z;
+    int exiting = 0;
+    double result = 0;
+    double total_sum = 0;
+    double total_points_c = 0;
+    double iteration = 0;
+
+    while (!exiting) {
+        double *points = (double *) malloc(arr_size * sizeof(double) + MPI_BSEND_OVERHEAD + 7);
+        for (long i = 0; i < arr_size; i += 3) {
+            double x = get_rand(a1, b1);
+            double y = get_rand(a2, b2);
+            double z = get_rand(a3, b3);
+
+            points[i] = x;
+            points[i + 1] = y;
+            points[i + 2] = z;
+        }
+
+        long bunch_size = NUMBER_OF_POINTS / (n_proc - 1) * 3;
+        for (long i = 1; i < n_proc; i++) {
+            long offset = (i - 1) * bunch_size;
+            MPI_Send(&points[offset], bunch_size, MPI_DOUBLE, i, 0, MPI_COMM_WORLD);
+        }
+
+        double local_sum = 0;
+        double sum = 0;
+        MPI_Reduce(&local_sum, &sum, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+        total_sum += sum;
+        total_points_c += NUMBER_OF_POINTS;
+        free(points);
+
+        result = area * total_sum / total_points_c;
+
+        std::cout << "Iteration: " << iteration++ << std::endl;
+        std::cout << "Result: " << result << std::endl;
+        double err = std::abs(result - precise_res);
+        std::cout << "Error: " << err << std::endl << std::endl;
+
+        if (err <= eps) {
+            exiting = 1;
+        }
+        MPI_Bcast(&exiting, 1, MPI_INT, 0, MPI_COMM_WORLD);
     }
-
-    long bunch_size = NUMBER_OF_POINTS / (n_proc - 1) * 3;
-    for (long i = 1; i < n_proc; i++) {
-        long offset = (i - 1) * bunch_size;
-        MPI_Send(&points[offset], bunch_size, MPI_DOUBLE, i, 0, MPI_COMM_WORLD);
-    }
-
-    double local_sum = 0;
-    double sum = 0;
-    MPI_Reduce(&local_sum, &sum, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-
-    double result = area * sum / NUMBER_OF_POINTS;
-    std::cout << result << std::endl;
-    std::cout << std::abs(result - precise_res) << std::endl;
 }
 
 void worker_routine() {
-    long bunch_size = NUMBER_OF_POINTS / (n_proc - 1) * 3;
-    double *points = (double *) malloc(bunch_size * sizeof(double) + MPI_BSEND_OVERHEAD + 7);
+    int exiting = 0;
 
-    MPI_Recv(points, bunch_size, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    while (!exiting) {
+        long bunch_size = NUMBER_OF_POINTS / (n_proc - 1) * 3;
+        double *points = (double *) malloc(bunch_size * sizeof(double) + MPI_BSEND_OVERHEAD + 7);
 
-    double local_sum = 0;
-    for (int i = 0; i < bunch_size; i += 3) {
-        local_sum += f(points[i], points[i + 1], points[i + 2]);
+        MPI_Recv(points, bunch_size, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+
+        double local_sum = 0;
+        for (int i = 0; i < bunch_size; i += 3) {
+            local_sum += f(points[i], points[i + 1], points[i + 2]);
+        }
+
+        MPI_Reduce(&local_sum, nullptr, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+
+        MPI_Bcast(&exiting, 1, MPI_INT, 0, MPI_COMM_WORLD);
     }
-
-    MPI_Reduce(&local_sum, nullptr, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
 }
 
 int main(int argc, char *argv[]) {
