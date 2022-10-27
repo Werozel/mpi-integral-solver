@@ -8,7 +8,7 @@ build:
 	mpicxx ${TARGET} -o ${OUTPUT}
 
 run:
-	mpirun -n ${n_proc} ${OUTPUT}
+	mpirun -n ${n_proc} ${OUTPUT} ${eps}
 
 schedule:
 	mpisubmit.bg -n ${n_proc} ./${OUTPUT}
