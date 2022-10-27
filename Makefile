@@ -16,7 +16,7 @@ schedule-bluegene:
 schedule-polus:
 	module load SpectrumMPI/10.1.0
 	mpicxx -std=c++11 -O3 -o main.o main.cpp
-	mpisubmit.pl -p ${n_proc} -t ${n_threads} main.o ${eps}
+	mpisubmit.pl -p ${n_proc} main.o ${eps}
 
 clean:
 	rm -rf ${TRASH}

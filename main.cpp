@@ -5,7 +5,7 @@
 double a1 = -1, a2 = -1, a3 = 0, b1 = 1, b2 = 1, b3 = 1;
 double area = (b1 - a1) * (b2 - a2) * (b3 - a3);
 
-const long NUMBER_OF_POINTS = 1000;
+const long NUMBER_OF_POINTS = 1024;
 const long arr_size = NUMBER_OF_POINTS * 3;
 int n_proc, rank;
 double eps;
@@ -30,7 +30,7 @@ double get_rand(double min, double max)
 }
 
 void master_routine() {
-    srand(time(nullptr));
+    srand(42);
 
     std::cout << "Precise result: " << precise_res << std::endl << std::endl;
 
